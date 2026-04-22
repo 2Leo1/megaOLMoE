@@ -1,6 +1,6 @@
 # megaOLMoE
 
-Форк [megablocks](https://github.com/databricks/megablocks) для экспериментов с роутером OLMoE. Цель — воспроизвести, а затем улучшить [L2R](https://arxiv.org/pdf/2601.21349) вместо стандартного top-k роутинга.
+Форк [megablocks](https://github.com/Muennighoff/megablocks/tree/olmoe) для экспериментов с роутером OLMoE. Цель — воспроизвести, а затем улучшить [L2R](https://arxiv.org/pdf/2601.21349) вместо стандартного top-k роутинга.
 
 ## Установка
 
