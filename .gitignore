@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data / logs / artifacts
+data/
+logs/
+notebooks/
+*.pt
+*.pth
+*.bin
+*.ckpt
+start_env.sh
+
+# Docker / local env
+.env
+*.log
+*.yml
+Dockerfile
+
+# Cloned external repos
+src/OLMo/
+src/OLMoE/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+src/megablocks/build/
+src/megablocks/dist/
+src/megablocks/*.egg-info/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
