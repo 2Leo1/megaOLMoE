@@ -31,7 +31,7 @@ ext_modules = [
 
 install_requires = [
     'numpy>=1.21.5,<2.1.0',
-    'torch>=2.3.0,<2.4',
+    'torch>=2.3.0',
     'triton>=2.1.0',
     'stanford-stk @ git+https://git@github.com/stanford-futuredata/stk.git@a1ddf98466730b88a2988860a9d8000fd1833301',
     'packaging>=21.3.0,<24.2',

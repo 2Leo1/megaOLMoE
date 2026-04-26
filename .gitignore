@@ -23,7 +23,6 @@ start_env.sh
 .env
 *.log
 *.yml
-Dockerfile
 
 # Cloned external repos
 src/OLMo/

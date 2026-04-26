@@ -63,7 +63,7 @@ def _scaled_reduce_scatter(parallel_dw, group, dw=None, async_op=False):
 class WeightParallelSddNt(torch.autograd.Function):
 
     @staticmethod
-    @torch.cuda.amp.custom_fwd
+    @torch.amp.custom_fwd(device_type="cuda")
     def forward(ctx, x, w, topo, group):
         # Cast inputs using ctx dtype from AMP
         if ctx._fwd_used_autocast:
@@ -89,7 +89,7 @@ class WeightParallelSddNt(torch.autograd.Function):
         return stk.ops.sdd(x, parallel_w.t(), topo).data
 
     @staticmethod
-    @torch.cuda.amp.custom_bwd
+    @torch.amp.custom_bwd(device_type="cuda")
     def backward(ctx, grad):
         x, w = ctx.saved_tensors[:2]
         grad = stk.Matrix(ctx.shape, grad, *ctx.saved_tensors[2:])
@@ -131,7 +131,7 @@ def sdd_nt(a, b, topo, group):
 class WeightParallelDsdNn(torch.autograd.Function):
 
     @staticmethod
-    @torch.cuda.amp.custom_fwd
+    @torch.amp.custom_fwd(device_type="cuda")
     def forward(ctx,
                 shape,
                 data,
@@ -177,7 +177,7 @@ class WeightParallelDsdNn(torch.autograd.Function):
         return stk.ops.dsd(x, parallel_w)
 
     @staticmethod
-    @torch.cuda.amp.custom_bwd
+    @torch.amp.custom_bwd(device_type="cuda")
     def backward(ctx, grad):
         x = stk.Matrix(ctx.shape, *ctx.saved_tensors[:-1])
         w = ctx.saved_tensors[-1]
@@ -222,7 +222,7 @@ class MemoryOptimizedWeightParallelMLP(torch.autograd.Function):
     """Sparse MLP with manually scheduled memory reuse."""
 
     @staticmethod
-    @torch.cuda.amp.custom_fwd
+    @torch.amp.custom_fwd(device_type="cuda")
     def forward(ctx, x, w1, w2, topo, group):
         # Cast inputs using ctx dtype from AMP
         if ctx._fwd_used_autocast:
@@ -264,7 +264,7 @@ class MemoryOptimizedWeightParallelMLP(torch.autograd.Function):
         return dsd_out
 
     @staticmethod
-    @torch.cuda.amp.custom_bwd
+    @torch.amp.custom_bwd(device_type="cuda")
     def backward(ctx, ddsd_out):
         x, w1, w2 = ctx.saved_tensors[:3]
         sdd_out = stk.Matrix(ctx.shape, *ctx.saved_tensors[3:])
