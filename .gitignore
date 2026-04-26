@@ -24,9 +24,6 @@ start_env.sh
 *.log
 *.yml
 
-# Cloned external repos
-src/OLMo/
-src/OLMoE/
 
 # Build artifacts
 build/

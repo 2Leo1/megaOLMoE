@@ -47,19 +47,9 @@ rm -rf venv/ .conda/ miniconda3/ 2>/dev/null || true
 mkdir -p src configs data logs notebooks scripts
 echo -e "${GREEN}Workspace directories created: src/ configs/ data/ logs/ notebooks/ scripts/${NC}"
 
-# 3. Clone the Repositories
-echo -e "\n${YELLOW}[3/6] Cloning core repositories (Host Side)...${NC}"
-cd src
-
-echo "Cloning OLMoE..."
-git clone https://github.com/allenai/OLMoE.git
-
-echo "Cloning OLMo (Stable version)..."
-git clone https://github.com/allenai/OLMo.git
-cd OLMo
-git checkout $(git rev-list -n 1 --before="2024-09-01" main)
-cd ..
-
+# 3. Init submodules
+echo -e "\n${YELLOW}[3/6] Initializing submodules (OLMo, OLMoE)...${NC}"
+git submodule update --init --recursive
 cd "${PROJECT_ROOT}"
 
 # 4. Generate the Dockerfile

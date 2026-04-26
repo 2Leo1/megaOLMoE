@@ -1,0 +1,6 @@
+[submodule "src/OLMo"]
+	path = src/OLMo
+	url = https://github.com/Kiril2434/OLMo.git
+[submodule "src/OLMoE"]
+	path = src/OLMoE
+	url = https://github.com/allenai/OLMoE.git
