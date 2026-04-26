@@ -17,7 +17,7 @@ DEFAULT_ACTIVATION_FN = partial(F.gelu, approximate="tanh")
 class Arguments:
     # Model arguments.
     hidden_size : int = 1024
-    ffn_hidden_size : int = 4096
+    ffn_hidden_size : int = 1024
     num_layers : int = 1
     bias : bool = True
     return_bias : bool = True
@@ -35,7 +35,7 @@ class Arguments:
     moe_expert_choice: bool = False
     moe_expert_choice_grouped: bool = False
 
-    moe_latent_size : int = 128
+    moe_latent_size : int = 2
     moe_num_anchors : int = 16
     moe_router_use_input_rmsnorm : bool = True
     moe_router_rmsnorm_eps : float = 1e-6
