@@ -1,13 +1,19 @@
 from megablocks.layers import common
 from megablocks.layers import mpu
-from megablocks.layers import router
 from megablocks.layers import mlp
 from megablocks.layers import sharedexpert_registry
 from megablocks.layers.all_to_all import all_to_all
 from megablocks.layers.arguments import Arguments
+import megablocks.layers.routerL2R as routerL2R
+import megablocks.layers.routerBasick as routerBasick
 import megablocks.ops as ops
 import numpy as np
 import torch
+
+_ROUTER_REGISTRY = {
+    "L2R": routerL2R.LearnedRouter,
+    "basic": routerBasick.LearnedRouter,
+}
 
 
 _LOAD_BALANCING_LOSS = []
@@ -507,7 +513,10 @@ class MoE(torch.nn.Module):
         super(MoE, self).__init__()
 
         # Token router.
-        self.router = router.LearnedRouter(args)
+        router_cls = _ROUTER_REGISTRY.get(args.router_type)
+        if router_cls is None:
+            raise ValueError(f"Unknown router_type: {args.router_type!r}. Available: {list(_ROUTER_REGISTRY)}")
+        self.router = router_cls(args)
 
         # Expert computation helper.
         self.experts = self._init_experts_mlp(args)

@@ -15,8 +15,9 @@ bash install.sh      # клонирует OLMo/OLMoE, собирает Docker-о
 
 ```
 src/megablocks/megablocks/layers/
-├── router.py
 ├── moe.py
+├── routerL2R.py
+├── routerBasick.py
 └── arguments.py
 ```
 
