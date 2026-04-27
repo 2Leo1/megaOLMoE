@@ -6,6 +6,7 @@ from megablocks.layers.all_to_all import all_to_all
 from megablocks.layers.arguments import Arguments
 import megablocks.layers.routerL2R as routerL2R
 import megablocks.layers.routerBasick as routerBasick
+import megablocks.layers.routerL2Rfast as routerL2Rfast
 import megablocks.ops as ops
 import numpy as np
 import torch
@@ -13,6 +14,7 @@ import torch
 _ROUTER_REGISTRY = {
     "L2R": routerL2R.LearnedRouter,
     "basic": routerBasick.LearnedRouter,
+    "L2Rfast": routerL2Rfast.LearnedRouter,
 }
 
 
@@ -36,7 +38,7 @@ def clear_load_balancing_loss():
 
 def batched_load_balancing_loss(args : Arguments):
     if args.moe_loss_weight == 0:
-        return 0.0
+        return 0.0, 0.0
 
     # tokens_per_expert[i].shape = (num_experts)
     # expert_scores[i].shape = (tokens, num_experts)

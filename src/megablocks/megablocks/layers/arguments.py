@@ -35,11 +35,13 @@ class Arguments:
     moe_expert_choice: bool = False
     moe_expert_choice_grouped: bool = False
 
+    router_type : str = "basic"
+
     moe_latent_size : int = 2
     moe_num_anchors : int = 16
     moe_router_use_input_rmsnorm : bool = True
     moe_router_rmsnorm_eps : float = 1e-6
-    moe_norm_eps : float = 1e-9
+    moe_norm_eps : float = 1e-6
 
     sips_beta : float = 1.0
     sips_gamma : float = 1.0
