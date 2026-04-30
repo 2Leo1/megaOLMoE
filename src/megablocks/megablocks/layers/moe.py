@@ -7,6 +7,7 @@ from megablocks.layers.arguments import Arguments
 import megablocks.layers.routerL2R as routerL2R
 import megablocks.layers.routerBasick as routerBasick
 import megablocks.layers.routerL2Rfast as routerL2Rfast
+import megablocks.layers.routerL2R_latest as routerL2R_latest
 import megablocks.ops as ops
 import numpy as np
 import torch
@@ -15,6 +16,7 @@ _ROUTER_REGISTRY = {
     "L2R": routerL2R.LearnedRouter,
     "basic": routerBasick.LearnedRouter,
     "L2Rfast": routerL2Rfast.LearnedRouter,
+    "L2R_latest": routerL2R_latest.LearnedRouter,
 }
 
 
@@ -537,7 +539,8 @@ class MoE(torch.nn.Module):
         x = common.cast_if_autocast_enabled(x)
 
         # Compute the expert scores and assignments.
-        scores, logits, expert_weights, top_experts = self.router(x)
+        router_out = self.router(x)
+        scores, logits, expert_weights, top_experts = router_out[:4]
 
         # Compute the experts.
         out = self.experts(x, scores, logits, expert_weights, top_experts)

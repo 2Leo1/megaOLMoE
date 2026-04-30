@@ -1,3 +1,4 @@
+# Base image: Official PyTorch Devel (Includes full CUDA toolkit, headers, and GCC)
 FROM pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
 
 ENV DEBIAN_FRONTEND=noninteractive
