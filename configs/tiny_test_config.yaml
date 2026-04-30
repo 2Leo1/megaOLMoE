@@ -32,7 +32,7 @@ model:
   init_fn: normal
   init_std: 0.02
   init_cutoff_factor: 3
-  moe_router_type: "L2R_latest"
+  moe_router_type: "L2Rfast"
   moe_num_experts: 8
   moe_top_k: 2
 
