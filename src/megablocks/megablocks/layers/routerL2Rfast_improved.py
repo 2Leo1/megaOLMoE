@@ -44,6 +44,11 @@ class LearnedRouter(torch.nn.Module):
         self.beta = torch.nn.Parameter(
             torch.ones(1, dtype=common.dtype(args), device=args.device) * args.sips_beta
         )
+        self.register_buffer(
+            "balance_bias",
+            torch.zeros(args.moe_num_experts, dtype=torch.float32, device=args.device),
+            persistent=True,
+        )
 
     def input_rmsnorm(self, x):
         return x * torch.rsqrt(
@@ -87,21 +92,31 @@ class LearnedRouter(torch.nn.Module):
     def forward(self, x):
         flattened_x = x.view(-1, x.shape[-1])
         logits = self._compute_logits(flattened_x)
-        scores = logits.softmax(dim=-1)
-        expert_weights, expert_indices = self._top_k(logits)
-        expert_weights = torch.exp(
-            expert_weights - torch.logsumexp(logits, dim=-1, keepdim=True)
-        )
-        if self.args.moe_normalize_expert_weights:
-            expert_weights = expert_weights / torch.norm(
-                expert_weights,
-                p=self.args.moe_normalize_expert_weights,
-                dim=-1,
-                keepdim=True,
-            )
+        scores = torch.softmax(logits, dim=-1)
+        routing_logits = logits
+        if self.args.moe_loss_free_balancing:
+            routing_logits = routing_logits + self.balance_bias.to(dtype=logits.dtype)
+        _, expert_indices = self._top_k(routing_logits)
+        expert_logits = logits.gather(dim=-1, index=expert_indices)
+        expert_weights = torch.softmax(expert_logits, dim=-1)
 
         expert_indices = (
             _uniform_expert_assignment(expert_indices, self.args.moe_num_experts)
             if self.args.uniform_expert_assignment else expert_indices
         )
         return scores, logits, expert_weights, expert_indices
+
+    @torch.no_grad()
+    def update_balance_bias(self, tokens_per_expert):
+        if not self.args.moe_loss_free_balancing:
+            return
+        counts = tokens_per_expert.to(device=self.balance_bias.device, dtype=torch.float32)
+        mean_count = counts.mean()
+        if mean_count <= 0:
+            return
+        load_error = (mean_count - counts) / mean_count
+        self.balance_bias.add_(self.args.moe_loss_free_balance_bias_update_rate * load_error)
+        self.balance_bias.clamp_(
+            -self.args.moe_loss_free_balance_bias_max,
+            self.args.moe_loss_free_balance_bias_max,
+        )

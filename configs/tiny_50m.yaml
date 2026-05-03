@@ -1,0 +1,117 @@
+run_name: tiny_50m
+seed: 6198
+dry_run: false
+no_pre_train_checkpoint: true
+
+model:
+  d_model: 384
+  n_heads: 6
+  n_layers: 4
+  mlp_ratio: 4
+  weight_tying: false
+  alibi: false
+  rope: true
+  flash_attention: false
+  attention_dropout: 0.0
+  attention_layer_norm: false
+  residual_dropout: 0.0
+  embedding_dropout: 0.0
+  block_type: sequential
+  layer_norm_type: rms
+  layer_norm_with_affine: true
+  bias_for_layer_norm: false
+  attention_layer_norm_with_affine: false
+  activation_type: swiglu
+  max_sequence_length: 512
+  include_bias: false
+  vocab_size: 50280
+  embedding_size: 50304
+  eos_token_id: 0
+  pad_token_id: 1
+  init_device: cuda
+  init_fn: normal
+  init_std: 0.02
+  init_cutoff_factor: 3
+  moe_router_type: "L2Rfast_improved"
+  moe_num_experts: 8
+  moe_top_k: 2
+  moe_loss_weight: 0.0
+  moe_zloss_weight: 0.0
+  moe_loss_free_balancing: true
+  moe_loss_free_balance_bias_update_rate: 1.0e-4
+  moe_loss_free_balance_bias_max: 10.0
+
+optimizer:
+  name: adamw
+  learning_rate: 8.0e-4
+  weight_decay: 0.1
+  eps: 1.0e-8
+  decay_norm_and_bias: true
+  decay_embeddings: true
+  betas:
+    - 0.9
+    - 0.95
+  metrics_log_interval: 10
+
+scheduler:
+  name: cosine_with_warmup
+  units: tokens
+  t_warmup: 2500000
+  t_max: 50000000
+  alpha_f: 0.1
+  warmup_min_lr: 0
+
+tokenizer:
+  identifier: tokenizers/allenai_gpt-neox-olmo-dolma-v1_5.json
+  truncate_direction: right
+
+save_folder: runs/${run_name}
+save_overwrite: true
+save_interval: 3000
+save_interval_unsharded: 3000
+save_num_checkpoints_to_keep: 1
+save_num_unsharded_checkpoints_to_keep: 1
+load_path: null
+
+max_duration: 500e6T
+global_train_batch_size: 64
+device_train_microbatch_size: 4
+
+precision: amp_bf16
+distributed_strategy: single
+
+max_grad_norm: 1.0
+max_grad_norm_ratio: null
+
+speed_monitor:
+  window_size: 10
+
+eval_interval: 50000
+eval_subset_num_batches: -1
+device_eval_batch_size: 4
+evaluators: []
+
+data:
+  memmap_dtype: uint16
+  pad_direction: right
+  num_workers: 2
+  drop_last: true
+  pin_memory: true
+  prefetch_factor: 2
+  persistent_workers: true
+  timeout: 0
+  instance_filter:
+    repetition_max_period: 13
+    repetition_min_period: 1
+    repetition_max_count: 32
+  datasets:
+    cosmopedia_v2:
+      - /workspace/data/olmoe-router-500m/cosmopedia_v2/part-00000.npy
+    finemath_4plus:
+      - /workspace/data/olmoe-router-500m/finemath_4plus/part-00000.npy
+    fineweb_edu_dedup:
+      - /workspace/data/olmoe-router-500m/fineweb_edu_dedup/part-00000.npy
+      - /workspace/data/olmoe-router-500m/fineweb_edu_dedup/part-00001.npy
+      - /workspace/data/olmoe-router-500m/fineweb_edu_dedup/part-00002.npy
+    wikipedia_en:
+      - /workspace/data/olmoe-router-500m/wikipedia_en/part-00000.npy

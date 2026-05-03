@@ -1,4 +1,4 @@
-run_name: tiny-router-2m
+run_name: tiny_2m
 seed: 6198
 dry_run: false
 no_pre_train_checkpoint: true
@@ -32,9 +32,14 @@ model:
   init_fn: normal
   init_std: 0.02
   init_cutoff_factor: 3
-  moe_router_type: "L2Rfast"
+  moe_router_type: "L2Rfast_improved"
   moe_num_experts: 8
   moe_top_k: 2
+  moe_loss_weight: 0.0
+  moe_zloss_weight: 0.0
+  moe_loss_free_balancing: true
+  moe_loss_free_balance_bias_update_rate: 1.0e-4
+  moe_loss_free_balance_bias_max: 10.0
 
 optimizer:
   name: adamw

@@ -7,6 +7,7 @@ from megablocks.layers.arguments import Arguments
 import megablocks.layers.routerL2R as routerL2R
 import megablocks.layers.routerBasick as routerBasick
 import megablocks.layers.routerL2Rfast as routerL2Rfast
+import megablocks.layers.routerL2Rfast_improved as routerL2Rfast_improved
 import megablocks.layers.routerL2R_latest as routerL2R_latest
 import megablocks.ops as ops
 import numpy as np
@@ -16,6 +17,7 @@ _ROUTER_REGISTRY = {
     "L2R": routerL2R.LearnedRouter,
     "basic": routerBasick.LearnedRouter,
     "L2Rfast": routerL2Rfast.LearnedRouter,
+    "L2Rfast_improved": routerL2Rfast_improved.LearnedRouter,
     "L2R_latest": routerL2R_latest.LearnedRouter,
 }
 
@@ -39,7 +41,7 @@ def clear_load_balancing_loss():
 
 
 def batched_load_balancing_loss(args : Arguments):
-    if args.moe_loss_weight == 0:
+    if args.moe_loss_weight == 0 and args.moe_zloss_weight == 0:
         return 0.0, 0.0
 
     # tokens_per_expert[i].shape = (num_experts)
@@ -110,7 +112,7 @@ def batched_load_balancing_loss(args : Arguments):
         args.moe_top_k
     )
     scale = scale_numerator / scale_denominator
-    zloss = (torch.log(torch.exp(expert_logits).sum(dim=-1)) ** 2).sum() / scale_denominator
+    zloss = torch.logsumexp(expert_logits, dim=-1).pow(2).sum() / scale_denominator
     return scale * torch.dot(tokens_per_expert, expert_scores), args.moe_zloss_weight * zloss    
 
 
@@ -460,7 +462,8 @@ class ParallelMLP(torch.nn.Module):
         # Compute the experts.
         x, tokens_per_expert = self.forward_fn(
             x, expert_weights, top_experts)
-        if self.training and self.args.moe_loss_weight > 0:
+        self._last_tokens_per_expert = tokens_per_expert.detach()
+        if self.training and (self.args.moe_loss_weight > 0 or self.args.moe_zloss_weight > 0):
             save_load_balancing_loss((tokens_per_expert, scores, logits))
         x = x.view(in_shape)
         if self.bias is not None:
@@ -515,6 +518,7 @@ class MoE(torch.nn.Module):
 
     def __init__(self, args : Arguments):
         super(MoE, self).__init__()
+        self.args = args
 
         # Token router.
         router_cls = _ROUTER_REGISTRY.get(args.router_type)
@@ -544,6 +548,14 @@ class MoE(torch.nn.Module):
 
         # Compute the experts.
         out = self.experts(x, scores, logits, expert_weights, top_experts)
+        tokens_per_expert = getattr(self.experts, "_last_tokens_per_expert", None)
+        if (
+            self.training
+            and self.args.moe_loss_free_balancing
+            and tokens_per_expert is not None
+            and hasattr(self.router, "update_balance_bias")
+        ):
+            self.router.update_balance_bias(tokens_per_expert)
         if self.shared_expert is not None:
             shared_expert_out = self.shared_expert(x)
             out = self.shared_expert.add_experts_sharedexpert(shared_expert_out, out)

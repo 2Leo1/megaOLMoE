@@ -4,7 +4,7 @@
 Loads a checkpoint, runs N held-out batches, and reports:
 - Cross-entropy loss and perplexity
 - Per-MoE-layer expert utilization (% of tokens per expert)
-- Routing entropy vs. uniform max
+- Routing entropy from router logits vs. uniform max
 - Load-balance coefficient of variation (CV) over experts
 - Average top-k weight magnitude
 
@@ -70,17 +70,23 @@ def main() -> None:
     n_experts = model.config.moe_num_experts
     top_k = model.config.moe_top_k
     print(f"Experts: {n_experts}, top_k: {top_k}")
+    print(
+        "MoE aux: "
+        f"loss_weight={getattr(model.config, 'moe_loss_weight', 'n/a')}, "
+        f"zloss_weight={getattr(model.config, 'moe_zloss_weight', 'n/a')}, "
+        f"loss_free={getattr(model.config, 'moe_loss_free_balancing', 'n/a')}"
+    )
 
     # Find all MoE layers and hook their routers.
     moe_layers = [(name, m) for name, m in model.named_modules() if isinstance(m, MoE)]
     print(f"Found {len(moe_layers)} MoE layer(s)")
 
-    layer_buf: list[dict] = [{"scores": [], "weights": [], "indices": []} for _ in moe_layers]
+    layer_buf: list[dict] = [{"logits": [], "weights": [], "indices": []} for _ in moe_layers]
 
     def make_hook(idx: int):
         def hook(_module, _inp, out):
-            scores, _logits, expert_weights, expert_indices = out[:4]
-            layer_buf[idx]["scores"].append(scores.detach().float().cpu())
+            _scores, logits, expert_weights, expert_indices = out[:4]
+            layer_buf[idx]["logits"].append(logits.detach().float().cpu())
             layer_buf[idx]["weights"].append(expert_weights.detach().float().cpu())
             layer_buf[idx]["indices"].append(expert_indices.detach().cpu())
         return hook
@@ -137,13 +143,27 @@ def main() -> None:
 
         indices = torch.cat(buf["indices"]).flatten()           # [N * top_k]
         weights = torch.cat(buf["weights"]).flatten()           # [N * top_k]
-        scores = torch.cat(buf["scores"])                       # [N, num_experts]
+        logits = torch.cat(buf["logits"])                       # [N, num_experts]
 
         counts = torch.bincount(indices.long(), minlength=n_experts).float()
         usage_pct = counts / counts.sum() * 100
 
-        probs = torch.softmax(scores, dim=-1)
+        router = moe_layers[i][1].router
+        balance_bias = getattr(router, "balance_bias", None)
+        bias_stats = None
+        routing_logits = logits
+        if balance_bias is not None:
+            bias = balance_bias.detach().float().cpu()
+            bias_stats = (bias.min().item(), bias.mean().item(), bias.max().item())
+            if getattr(model.config, "moe_loss_free_balancing", False):
+                routing_logits = logits + bias.view(1, -1)
+
+        probs = torch.softmax(routing_logits, dim=-1)
         entropy = -(probs * probs.clamp_min(1e-12).log()).sum(dim=-1).mean().item()
+
+        top_values = torch.topk(routing_logits, k=min(3, n_experts), dim=-1).values
+        top12_gap = (top_values[:, 0] - top_values[:, 1]).mean().item() if n_experts > 1 else float("nan")
+        top23_gap = (top_values[:, 1] - top_values[:, 2]).mean().item() if n_experts > 2 else float("nan")
 
         mean_count = counts.mean().item()
         cv = (counts.std().item() / mean_count) if mean_count > 0 else float("inf")
@@ -158,6 +178,9 @@ def main() -> None:
         print(f"  dead experts    : {dead}/{n_experts}")
         print(f"  max / min share : {max_share:.2f}% / {min_share:.2f}%")
         print(f"  routing entropy : {entropy:.3f}  ({entropy / max_entropy * 100:.1f}% of max)")
+        print(f"  logit top gaps  : top1-top2={top12_gap:.4f}, top2-top3={top23_gap:.4f}")
+        if bias_stats is not None:
+            print(f"  balance bias    : min/mean/max={bias_stats[0]:.4f}/{bias_stats[1]:.4f}/{bias_stats[2]:.4f}")
         print(f"  load-balance CV : {cv:.3f}  (0=perfect, >0.5=imbalanced)")
         print(f"  weight mean/std : {weights.mean().item():.3f} / {weights.std().item():.3f}")
 

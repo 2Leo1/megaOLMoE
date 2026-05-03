@@ -39,3 +39,5 @@ src/megablocks/*.egg-info/
 
 # OS
 .DS_Store
+install.cmd
+.devcontainer/devcontainer.json
