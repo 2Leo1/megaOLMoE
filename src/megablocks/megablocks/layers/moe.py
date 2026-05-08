@@ -6,9 +6,7 @@ from megablocks.layers.all_to_all import all_to_all
 from megablocks.layers.arguments import Arguments
 import megablocks.layers.routerL2R as routerL2R
 import megablocks.layers.routerBasick as routerBasick
-import megablocks.layers.routerL2Rfast as routerL2Rfast
-import megablocks.layers.routerL2Rfast_improved as routerL2Rfast_improved
-import megablocks.layers.routerL2R_latest as routerL2R_latest
+import megablocks.layers.router_latest as router_latest
 import megablocks.ops as ops
 import numpy as np
 import torch
@@ -16,9 +14,7 @@ import torch
 _ROUTER_REGISTRY = {
     "L2R": routerL2R.LearnedRouter,
     "basic": routerBasick.LearnedRouter,
-    "L2Rfast": routerL2Rfast.LearnedRouter,
-    "L2Rfast_improved": routerL2Rfast_improved.LearnedRouter,
-    "L2R_latest": routerL2R_latest.LearnedRouter,
+    "Latest": router_latest.LearnedRouter,
 }
 
 
@@ -548,14 +544,6 @@ class MoE(torch.nn.Module):
 
         # Compute the experts.
         out = self.experts(x, scores, logits, expert_weights, top_experts)
-        tokens_per_expert = getattr(self.experts, "_last_tokens_per_expert", None)
-        if (
-            self.training
-            and self.args.moe_loss_free_balancing
-            and tokens_per_expert is not None
-            and hasattr(self.router, "update_balance_bias")
-        ):
-            self.router.update_balance_bias(tokens_per_expert)
         if self.shared_expert is not None:
             shared_expert_out = self.shared_expert(x)
             out = self.shared_expert.add_experts_sharedexpert(shared_expert_out, out)

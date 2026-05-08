@@ -73,8 +73,7 @@ def main() -> None:
     print(
         "MoE aux: "
         f"loss_weight={getattr(model.config, 'moe_loss_weight', 'n/a')}, "
-        f"zloss_weight={getattr(model.config, 'moe_zloss_weight', 'n/a')}, "
-        f"loss_free={getattr(model.config, 'moe_loss_free_balancing', 'n/a')}"
+        f"zloss_weight={getattr(model.config, 'moe_zloss_weight', 'n/a')}"
     )
 
     # Find all MoE layers and hook their routers.
@@ -148,15 +147,7 @@ def main() -> None:
         counts = torch.bincount(indices.long(), minlength=n_experts).float()
         usage_pct = counts / counts.sum() * 100
 
-        router = moe_layers[i][1].router
-        balance_bias = getattr(router, "balance_bias", None)
-        bias_stats = None
         routing_logits = logits
-        if balance_bias is not None:
-            bias = balance_bias.detach().float().cpu()
-            bias_stats = (bias.min().item(), bias.mean().item(), bias.max().item())
-            if getattr(model.config, "moe_loss_free_balancing", False):
-                routing_logits = logits + bias.view(1, -1)
 
         probs = torch.softmax(routing_logits, dim=-1)
         entropy = -(probs * probs.clamp_min(1e-12).log()).sum(dim=-1).mean().item()
@@ -179,8 +170,6 @@ def main() -> None:
         print(f"  max / min share : {max_share:.2f}% / {min_share:.2f}%")
         print(f"  routing entropy : {entropy:.3f}  ({entropy / max_entropy * 100:.1f}% of max)")
         print(f"  logit top gaps  : top1-top2={top12_gap:.4f}, top2-top3={top23_gap:.4f}")
-        if bias_stats is not None:
-            print(f"  balance bias    : min/mean/max={bias_stats[0]:.4f}/{bias_stats[1]:.4f}/{bias_stats[2]:.4f}")
         print(f"  load-balance CV : {cv:.3f}  (0=perfect, >0.5=imbalanced)")
         print(f"  weight mean/std : {weights.mean().item():.3f} / {weights.std().item():.3f}")
 

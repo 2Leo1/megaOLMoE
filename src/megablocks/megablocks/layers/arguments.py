@@ -30,9 +30,6 @@ class Arguments:
     moe_normalize_expert_weights : Optional[Union[int, float]] = None
     moe_loss_weight : float = 0.1
     moe_zloss_weight : float = 0.001
-    moe_loss_free_balancing : bool = False
-    moe_loss_free_balance_bias_update_rate : float = 1e-3
-    moe_loss_free_balance_bias_max : float = 10.0
     moe_jitter_eps : Optional[float] = None
     moe_lbl_in_fp32 : bool = False
     moe_expert_choice: bool = False
@@ -44,6 +41,7 @@ class Arguments:
     moe_num_anchors : int = 16
     moe_router_use_input_rmsnorm : bool = True
     moe_router_rmsnorm_eps : float = 1e-6
+    moe_router_logit_jitter_eps : Optional[float] = None
     moe_norm_eps : float = 1e-6
 
     sips_beta : float = 1.0

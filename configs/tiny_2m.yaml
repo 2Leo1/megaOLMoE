@@ -32,14 +32,13 @@ model:
   init_fn: normal
   init_std: 0.02
   init_cutoff_factor: 3
-  moe_router_type: "L2Rfast_improved"
+  moe_router_type: "Latest"
   moe_num_experts: 8
   moe_top_k: 2
-  moe_loss_weight: 0.0
-  moe_zloss_weight: 0.0
-  moe_loss_free_balancing: true
-  moe_loss_free_balance_bias_update_rate: 1.0e-4
-  moe_loss_free_balance_bias_max: 10.0
+  moe_loss_weight: 0.01
+  moe_zloss_weight: 1.0e-4
+  moe_latent_size: 16
+  moe_router_logit_jitter_eps: 1.0e-2
 
 optimizer:
   name: adamw
@@ -65,12 +64,12 @@ tokenizer:
   identifier: tokenizers/allenai_gpt-neox-olmo-dolma-v1_5.json
   truncate_direction: right
 
-save_folder: runs/${run_name}
-save_overwrite: true
+save_folder: runs/${run_name}_${model.moe_router_type}
+save_overwrite: false
 save_interval: 10000
 save_interval_unsharded: 10000
-save_num_checkpoints_to_keep: 1
-save_num_unsharded_checkpoints_to_keep: 1
+save_num_checkpoints_to_keep: -1
+save_num_unsharded_checkpoints_to_keep: -1
 load_path: null
 
 max_duration: 2e6T

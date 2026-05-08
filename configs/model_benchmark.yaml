@@ -1,0 +1,115 @@
+eval_subset_num_batches: 128
+device_eval_batch_size: 4
+
+evaluators:
+  - label: wikipedia-validation
+    type: lm
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      paths:
+        - /workspace/data/olmoe-router-500m/wikipedia_en/part-00000.npy
+      memmap_dtype: uint16
+      pad_direction: right
+      num_workers: 0
+      drop_last: true
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: piqa
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: hellaswag
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: arc_easy
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: arc_challenge
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: sciq
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: openbook_qa
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: winogrande
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  - label: copa
+    type: downstream
+    subset_num_batches: 128
+    device_eval_batch_size: 4
+    data:
+      num_workers: 0
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
