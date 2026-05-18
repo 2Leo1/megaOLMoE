@@ -39,6 +39,7 @@ model:
   moe_zloss_weight: 1.0e-4
   moe_latent_size: 16
   moe_router_logit_jitter_eps: 1.0e-2
+  moe_router_path_block_size: 1
 
 optimizer:
   name: adamw

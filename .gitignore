@@ -41,3 +41,5 @@ src/megablocks/*.egg-info/
 .DS_Store
 install.cmd
 .devcontainer/devcontainer.json
+2603.18297v2.pdf
+src/megablocks/megablocks/layers/router_temp_schedule

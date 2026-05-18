@@ -436,43 +436,73 @@ def build_source(
     written = 0
     docs = 0
     started = time.time()
-
-    texts = iter_hf_texts(
-        source,
-        cache_dir=args.hf_cache_dir,
-        seed=args.seed + source_index,
-        shuffle_buffer=args.shuffle_buffer,
-        min_chars=args.min_chars,
-        max_chars=args.max_chars,
-        trust_remote_code=args.trust_remote_code,
-    )
+    attempt = 0
+    max_attempts = args.max_stream_retries
 
     print(f"\n[{source.label}] target={human_count(budget)} tokens from {source.path}/{source.name or '-'}")
-    for batch in batched(texts, args.batch_size):
-        encodings = tokenizer.encode_batch(batch)
-        for encoding in encodings:
-            ids = token_ids_with_eos(encoding, eos_token_id)
-            if len(ids) < args.min_doc_tokens:
-                continue
-            remaining = budget - written
-            if remaining <= 0:
+
+    while written < budget:
+        try:
+            texts = iter_hf_texts(
+                source,
+                cache_dir=args.hf_cache_dir,
+                seed=args.seed + source_index + 1000 * attempt,
+                shuffle_buffer=args.shuffle_buffer,
+                min_chars=args.min_chars,
+                max_chars=args.max_chars,
+                trust_remote_code=args.trust_remote_code,
+            )
+
+            for batch in batched(texts, args.batch_size):
+                encodings = tokenizer.encode_batch(batch)
+                for encoding in encodings:
+                    ids = token_ids_with_eos(encoding, eos_token_id)
+                    if len(ids) < args.min_doc_tokens:
+                        continue
+                    remaining = budget - written
+                    if remaining <= 0:
+                        break
+                    if len(ids) > remaining:
+                        ids = ids[:remaining]
+                        if ids:
+                            ids[-1] = eos_token_id
+                    writer.write(ids)
+                    written += len(ids)
+                    docs += 1
+                if written >= budget:
+                    break
+                if docs and docs % args.log_every_docs == 0:
+                    elapsed = max(time.time() - started, 1e-6)
+                    print(
+                        f"[{source.label}] docs={docs:,} tokens={written:,}/{budget:,} "
+                        f"rate={written / elapsed:,.0f} tok/s",
+                        flush=True,
+                    )
+
+            if written >= budget:
                 break
-            if len(ids) > remaining:
-                ids = ids[:remaining]
-                if ids:
-                    ids[-1] = eos_token_id
-            writer.write(ids)
-            written += len(ids)
-            docs += 1
-        if written >= budget:
-            break
-        if docs and docs % args.log_every_docs == 0:
-            elapsed = max(time.time() - started, 1e-6)
+
+            attempt += 1
+            if attempt > max_attempts:
+                break
             print(
-                f"[{source.label}] docs={docs:,} tokens={written:,}/{budget:,} "
-                f"rate={written / elapsed:,.0f} tok/s",
+                f"[{source.label}] stream exhausted at {written:,}/{budget:,} tokens; "
+                f"retry {attempt}/{max_attempts} with new seed",
                 flush=True,
             )
+
+        except Exception as exc:
+            attempt += 1
+            if attempt > max_attempts:
+                raise
+            wait = min(60, 5 * attempt)
+            print(
+                f"[{source.label}] stream error at {written:,} tokens: "
+                f"{type(exc).__name__}: {exc}; "
+                f"retry {attempt}/{max_attempts} in {wait}s",
+                flush=True,
+            )
+            time.sleep(wait)
 
     shards = writer.close()
     trainable_tokens = sum(shard.tokens for shard in shards)
@@ -514,6 +544,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trust-remote-code", action="store_true")
     parser.add_argument("--overwrite", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--max-stream-retries", type=int, default=10,
+                        help="Retries on HF stream errors per source.")
     return parser.parse_args()
 
 

@@ -38,11 +38,26 @@ class LearnedRouter(torch.nn.Module):
         )
         args.init_method(self.anchors)
 
-        self.gamma = torch.nn.Parameter(
-            torch.ones(1, dtype=common.dtype(args), device=args.device)
-        )
-        self.beta = torch.nn.Parameter(
-            torch.ones(1, dtype=common.dtype(args), device=args.device)
+    def _load_from_state_dict(
+        self,
+        state_dict,
+        prefix,
+        local_metadata,
+        strict,
+        missing_keys,
+        unexpected_keys,
+        error_msgs,
+    ):
+        state_dict.pop(prefix + "gamma", None)
+        state_dict.pop(prefix + "beta", None)
+        super()._load_from_state_dict(
+            state_dict,
+            prefix,
+            local_metadata,
+            strict,
+            missing_keys,
+            unexpected_keys,
+            error_msgs,
         )
 
     def jitter(self, x):
@@ -77,7 +92,7 @@ class LearnedRouter(torch.nn.Module):
         k_norm = torch.norm(self.anchors, p=2.0, dim=-1, keepdim=True)
         k_norm = k_norm.clamp_min(self.args.moe_norm_eps)
 
-        phi_q = self.gamma * (1.0 + self.beta * torch.tanh(q_norm))
+        phi_q = 1.0 + torch.tanh(q_norm)
         psi_k = 1.0 + (k_norm - 1.0) / self.args.sips_p
 
         q_dir = q / q_norm

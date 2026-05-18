@@ -43,6 +43,7 @@ class Arguments:
     moe_router_rmsnorm_eps : float = 1e-6
     moe_router_logit_jitter_eps : Optional[float] = None
     moe_norm_eps : float = 1e-6
+    global_step : int = 0
 
     sips_beta : float = 1.0
     sips_gamma : float = 1.0

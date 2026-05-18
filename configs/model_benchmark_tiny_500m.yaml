@@ -1,0 +1,111 @@
+# Бенчмарк для tiny_500m_deep (d_model=384, 8 слоёв, MoE 8/top-2, seq=512),
+# обучение на ~2B токенов.
+#
+# Принципы для этого масштаба:
+#  1. Главный сигнал — UPSTREAM loss/perplexity на ЧИСТОМ held-out тексте,
+#     не входящем в обучающий набор. Accuracy на 2B токенах у предела
+#     случайности и сама по себе неинформативна.
+#  2. DOWNSTREAM считаем на ПОЛНОМ датасете (subset_num_batches: -1), без
+#     обрезки — иначе из-за маленькой выборки получаются артефактные
+#     совпадения (как было: ARC-Challenge 0.286822 == 0.286822).
+#  3. Добавлена непрерывная метрика arc_easy_ppl (ce_loss): она различает
+#     модели даже когда accuracy стоит на уровне угадывания.
+#  4. Используются только HF-датасеты (грузятся без внешних oe-eval данных).
+#
+# Запуск:
+#   python scripts/model_benchmark.py --run-dir runs/<...> \
+#       --benchmark-config configs/model_benchmark_tiny_500m.yaml
+
+eval_subset_num_batches: -1
+device_eval_batch_size: 8
+
+evaluators:
+  # ---- ГЛАВНАЯ МЕТРИКА: held-out perplexity на чистом тексте ----
+  # Этот wikipedia-шард НЕ входит в обучающие данные (olmoe-router-2b),
+  # поэтому даёт честный, низкодисперсный сигнал для сравнения роутеров.
+  # 512 батчей * 8 * 512 ≈ 2M токенов — стабильная оценка, быстро.
+  - label: wikipedia-heldout
+    type: lm
+    subset_num_batches: 512
+    device_eval_batch_size: 8
+    data:
+      paths:
+        - /workspace/data/olmoe-router-500m/wikipedia_en/part-00000.npy
+      memmap_dtype: uint16
+      pad_direction: right
+      num_workers: 1
+      drop_last: true
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  # ---- Непрерывная downstream-метрика (ce_loss) — чувствительна при низком compute ----
+  - label: arc_easy_ppl
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: &dd
+      num_workers: 1
+      drop_last: false
+      pin_memory: true
+      prefetch_factor: null
+      persistent_workers: false
+      timeout: 0
+
+  # ---- Accuracy-задачи на ПОЛНОМ датасете (порядок ~ по раннему сигналу у малых моделей) ----
+  - label: sciq
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: arc_easy
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: piqa
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: hellaswag
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: openbook_qa
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: arc_challenge
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  # 2-вариантные задачи: на 2B токенов почти всегда ~0.5, держим для полноты,
+  # но опираться на них для сравнения не стоит.
+  - label: boolq
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: winogrande
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
+
+  - label: copa
+    type: downstream
+    subset_num_batches: -1
+    device_eval_batch_size: 8
+    data: *dd
